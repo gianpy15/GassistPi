@@ -35,6 +35,7 @@ Google_cloud_api_key: ENTER-YOUR-GOOGLE-CLOUD-API-KEY-HERE
 Gpios:
   AIY_indicator:
     - 25
+    - 04
   assistant_indicators:
     - 05
     - 06

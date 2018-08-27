@@ -93,19 +93,69 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
 aiyindicator=configuration['Gpios']['AIY_indicator'][0]
+aiyindicator2=configuration['Gpios']['AIY_indicator'][1]
 stoppushbutton=configuration['Gpios']['stopbutton_music_AIY_pushbutton'][0]
 listening=configuration['Gpios']['assistant_indicators'][0]
 speaking=configuration['Gpios']['assistant_indicators'][1]
 
+class LedController:
+    def __init__(self, led1, led2=None):
+        self.__led1 = led1
+        self.__led2 = led2
+        self.__led_on = False
+        self.__pause_time = 0.02
+
+    def __start_led(self):
+        try:
+            while True:
+                for i in range(-50, 51):      # 101 because it stops when it finishes 100
+                    if self.__led_on:
+                        self.__led1.ChangeDutyCycle(max(i, 0))
+                        if self.__led2 is not None:
+                            self.__led2.ChangeDutyCycle(max(- i, 0))
+                    else:
+                        self.__led1.ChangeDutyCycle(0)
+                        if self.__led2 is not None:
+                            self.__led2.ChangeDutyCycle(0)
+                    time.sleep(self.__pause_time)
+                for i in range(50,-51,-1):      # from 100 to zero in steps of -1
+                    if self.__led_on:
+                        self.__led1.ChangeDutyCycle(max(i, 0))
+                        if self.__led2 is not None:
+                            self.__led2.ChangeDutyCycle(max(- i, 0))
+                    else:
+                        self.__led1.ChangeDutyCycle(0)
+                        if self.__led2 is not None:
+                            self.__led2.ChangeDutyCycle(0)
+                    time.sleep(self.__pause_time)
+        except KeyboardInterrupt:
+            self.__led1.stop()            # stop the white PWM output
+            self.__led2.stop()              # stop the red PWM output
+
+    def start_led(self):
+        thread = Thread(target=self.__start_led)
+        thread.start()
+
+    def led_on(self):
+        self.__led_on = True
+
+    def led_off(self):
+        self.__led_on = False
+
 GPIO.setup(aiyindicator, GPIO.OUT)
+GPIO.setup(aiyindicator2, GPIO.OUT)
 GPIO.setup(listening, GPIO.OUT)
 GPIO.setup(speaking, GPIO.OUT)
 GPIO.output(listening, GPIO.LOW)
 GPIO.output(speaking, GPIO.LOW)
 GPIO.setup(stoppushbutton, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-led=GPIO.PWM(aiyindicator,1)
-led.start(0)
-
+led=GPIO.PWM(aiyindicator,200)
+led2=GPIO.PWM(aiyindicator2,200)
+led2.start(100.0)
+lc = LedController(led, led2)
+lc.start_led()
+lc.led_on()
+# led.start(100.0)
 
 mediastopbutton=True
 
@@ -214,7 +264,8 @@ class Myassistant():
                    #json.dump(vollevel, f)
             #kodi.Application.SetVolume({"volume": 0})
             GPIO.output(listening,GPIO.HIGH)
-            led.ChangeDutyCycle(100)
+            #led.ChangeDutyCycle(0)
+            lc.led_off()
             if vlcplayer.is_vlc_playing():
                 if os.path.isfile("/home/pi/.mediavolume.json"):
                     vlcplayer.set_vlc_volume(15)
@@ -232,7 +283,8 @@ class Myassistant():
                 self.assistant.set_mic_mute(True)
           GPIO.output(listening,GPIO.LOW)
           GPIO.output(speaking,GPIO.LOW)
-          led.ChangeDutyCycle(0)
+          #led.ChangeDutyCycle(100.0)
+          lc.led_on()
             #Uncomment the following after starting the Kodi
             #with open('/home/pi/.volume.json', 'r') as f:
                    #vollevel = json.load(f)
@@ -246,17 +298,20 @@ class Myassistant():
         if (event.type == EventType.ON_RESPONDING_STARTED and event.args and not event.args['is_error_response']):
            GPIO.output(listening,GPIO.LOW)
            GPIO.output(speaking,GPIO.HIGH)
-           led.ChangeDutyCycle(50)
+           #led.ChangeDutyCycle(0)
+           lc.led_off()
 
         if event.type == EventType.ON_RESPONDING_FINISHED:
            GPIO.output(speaking,GPIO.LOW)
            GPIO.output(listening,GPIO.LOW)
-           led.ChangeDutyCycle(0)
+           #led.ChangeDutyCycle(0)
+           lc.led_off()
 
         if event.type == EventType.ON_RECOGNIZING_SPEECH_FINISHED:
            GPIO.output (listening, GPIO.LOW)
            GPIO.output (speaking, GPIO.LOW)
-           led.ChangeDutyCycle (0)
+           #led.ChangeDutyCycle (0)
+           lc.led_off()
 
         print(event)
 
@@ -267,7 +322,8 @@ class Myassistant():
                 self.assistant.set_mic_mute(True)
             GPIO.output(listening,GPIO.LOW)
             GPIO.output(speaking,GPIO.LOW)
-            led.ChangeDutyCycle(0)
+            #led.ChangeDutyCycle(100.0)
+            lc.led_on()
             #Uncomment the following after starting the Kodi
             #with open('/home/pi/.volume.json', 'r') as f:
                    #vollevel = json.load(f)
