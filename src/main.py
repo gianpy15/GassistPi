@@ -103,12 +103,12 @@ class LedController:
         self.__led1 = led1
         self.__led2 = led2
         self.__led_on = False
-        self.__pause_time = 0.02
+        self.__pause_time = 0.08
 
     def __start_led(self):
         try:
             while True:
-                for i in range(-50, 51):      # 101 because it stops when it finishes 100
+                for i in range(-50, 51, 4):      # 101 because it stops when it finishes 100
                     if self.__led_on:
                         self.__led1.ChangeDutyCycle(max(i, 0))
                         if self.__led2 is not None:
@@ -118,7 +118,7 @@ class LedController:
                         if self.__led2 is not None:
                             self.__led2.ChangeDutyCycle(0)
                     time.sleep(self.__pause_time)
-                for i in range(50,-51,-1):      # from 100 to zero in steps of -1
+                for i in range(50,-51,-4):      # from 100 to zero in steps of -1
                     if self.__led_on:
                         self.__led1.ChangeDutyCycle(max(i, 0))
                         if self.__led2 is not None:
